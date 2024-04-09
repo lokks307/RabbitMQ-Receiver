@@ -18,6 +18,13 @@ Routing key: careease-api-key
 Dashboard address: ec2-43-203-234-165.ap-northeast-2.compute.amazonaws.com:15672
 */
 
+/*
+docker build -t careease_receiver:0.0.1 .
+
+	docker run -d --name careease_receiver \
+	  -v ~/logs/:/app/logs/ \
+	  careease_receiver:0.0.1
+*/
 package main
 
 import (
@@ -34,6 +41,19 @@ func failOnError(err error, msg string) {
 }
 
 func main() {
+	// Specify the log file path
+	logFilePath := "logs/careease-log.txt"
+
+	// Open or create the log file
+	file, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	defer file.Close()
+
+	// Set output of logs to file
+	log.SetOutput(file)
+
 	conn, err := amqp.Dial("amqp://c2-test:c2-test-pw@ec2-43-203-234-165.ap-northeast-2.compute.amazonaws.com:5672/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
@@ -42,44 +62,40 @@ func main() {
 	failOnError(err, "Failed to open a channel")
 	defer ch.Close()
 
+	exchangeName := "careease-logs"
+	routingKey := "careease-api-key"
 	err = ch.ExchangeDeclare(
-		"logs_direct", // name
-		"direct",      // type
-		true,          // durable
-		false,         // auto-deleted
-		false,         // internal
-		false,         // no-wait
-		nil,           // arguments
+		exchangeName, // name
+		"direct",     // type
+		true,         // durable
+		false,        // auto-deleted
+		false,        // internal
+		false,        // no-wait
+		nil,          // arguments
 	)
 	failOnError(err, "Failed to declare an exchange")
 
 	q, err := ch.QueueDeclare(
-		"",    // name
-		false, // durable
-		false, // delete when unused
-		true,  // exclusive
-		false, // no-wait
-		nil,   // arguments
+		"careease-api-queue", // name
+		false,                // durable
+		false,                // delete when unused
+		true,                 // exclusive
+		false,                // no-wait
+		nil,                  // arguments
 	)
 	failOnError(err, "Failed to declare a queue")
 
 	log.Printf("conn, exchange, queue declaration success!")
-	if len(os.Args) < 2 {
-		log.Printf("Usage: %s [info] [warning] [error]", os.Args[0])
-		os.Exit(0)
-	}
-	for _, s := range os.Args[1:] {
-		log.Printf("Binding queue %s to exchange %s with routing key %s",
-			q.Name, "logs_direct", s)
-		err = ch.QueueBind(
-			q.Name,        // queue name
-			s,             // routing key
-			"logs_direct", // exchange
-			false,
-			nil)
-		failOnError(err, "Failed to bind a queue")
-	}
+	log.Printf("Binding queue %s to exchange %s with routing key %s",
+		q.Name, exchangeName, routingKey)
+	err = ch.QueueBind(
+		q.Name,       // queue name
+		routingKey,   // routing key
+		exchangeName, // exchange
+		false,
+		nil)
 
+	failOnError(err, "Failed to bind a queue")
 	msgs, err := ch.Consume(
 		q.Name, // queue
 		"",     // consumer
