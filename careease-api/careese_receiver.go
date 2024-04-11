@@ -22,7 +22,7 @@ Dashboard address: ec2-43-203-234-165.ap-northeast-2.compute.amazonaws.com:15672
 docker build -t careease_receiver:0.0.1 .
 
 	docker run -d --name careease_receiver \
-	  -v ~/logs/:/app/logs/ \
+	  -v ~/logs/careease-api-log:/app/logs/careease-api-log \
 	  careease_receiver:0.0.1
 */
 package main
@@ -30,7 +30,8 @@ package main
 import (
 	"log"
 	"os"
-
+	"fmt"
+	"time"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -42,7 +43,8 @@ func failOnError(err error, msg string) {
 
 func main() {
 	// Specify the log file path
-	logFilePath := "logs/careease-log.txt"
+	currentTime := time.Now()
+	logFilePath := fmt.Sprintf("logs/careease-api-log/careease-log-%s.txt", currentTime.Format("2006-01-02"))
 
 	// Open or create the log file
 	file, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)

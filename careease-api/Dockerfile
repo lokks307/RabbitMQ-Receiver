@@ -8,6 +8,7 @@ COPY . .
 RUN go mod init careease-api
 RUN go mod tidy
 
+RUN mkdir -p  /app/logs/careease-api-log
 RUN go build -v -o careease_receiver
 
 # Run the web service on container startup.
