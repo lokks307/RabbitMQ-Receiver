@@ -19,11 +19,11 @@ Dashboard address: ec2-43-203-234-165.ap-northeast-2.compute.amazonaws.com:15672
 */
 
 /*
-docker build -t careease_receiver:0.0.1 .
+sudo docker build -t careease_receiver:0.0.2 .
 
-	docker run -d --name careease_receiver \
+	sudo docker run -d --name careease_receiver \
 	  -v ~/logs/careease-api-log:/app/logs/careease-api-log \
-	  careease_receiver:0.0.1
+	  careease_receiver:0.0.2
 */
 package main
 
@@ -43,8 +43,8 @@ func failOnError(err error, msg string) {
 
 func main() {
 	// Specify the log file path
-	currentTime := time.Now()
-	logFilePath := fmt.Sprintf("logs/careease-api-log/careease-log-%s.txt", currentTime.Format("2006-01-02"))
+	currentTime := time.Now().Format("2006-01-02")
+	logFilePath := fmt.Sprintf("logs/careease-api-log/careease-log-%s.txt", currentTime)
 
 	// Open or create the log file
 	file, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
@@ -112,8 +112,19 @@ func main() {
 	var forever chan struct{}
 
 	go func() {
-		for d := range msgs {
-			log.Printf(" [x] %s", d.Body)
+		log.Printf("go routine started")
+		for d:= range msgs{
+			if currentTime != time.Now().Format("2006-01-02"){
+				file.Close()
+				currentTime = time.Now().Format("2006-01-02")
+
+				logFilePath := fmt.Sprintf("logs/careease-api-log/careease-log-%s.txt",currentTime)
+				file, err = os.OpenFile(logFilePath, os.O_APPEND | os.O_CREATE | os.O_WRONLY, 0666 )
+				failOnError(err, "open file rotation failed " + currentTime)
+
+				log.SetOutput(file)
+			} 
+			log.Printf("%s", d.Body)
 		}
 	}()
 

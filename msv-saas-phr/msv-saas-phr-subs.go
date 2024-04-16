@@ -1,45 +1,54 @@
-package main
-
 /*
-sudo docker build -t careplanner-mobile-api-receiver:0.0.1 .
+Exchange type: direct
+Exchange Name: msv-saas-phr-subs-logs
+Routing key: msv-saas-phr-subs-key
 
-sudo docker run -d --name careplanner-mobile-api \
--v ~/logs/careplanner-mobile-api-logs:/app/logs/careplanner-mobile-api-logs \
-careplanner-mobile-api-receiver:0.0.1
+id: c2-test
+pw: c2-test-pw
 */
 
-import(
-	"fmt"
-	"os"
+/*
+sudo docker build -t msv-saas-phr-subs:0.0.1 .
+
+sudo docker run -d --name msv-saas-phr-subs \
+-v ~/logs/msv-saas-phr-subs-logs:/app/logs/msv-saas-phr-subs-logs \
+msv-saas-phr-subs:0.0.1
+*/
+package main
+import (
 	"log"
+	"os"
+	"fmt"
 	"time"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
-func failOnError(err error, msg string){
-	if err != nil{
-		log.Panicf(msg, err)
+
+func failOnError(err error, msg string) {
+	if err != nil {
+		log.Panicf("%s: %s", msg, err)
 	}
 }
-
 func main(){
-	currentTime := time.Now().Format("2006-01-02")
+	exchangeName := "msv-saas-phr-subs-logs"
+	routingKey := "msv-saas-phr-subs-key"
 
-	logFilePath := fmt.Sprintf("logs/careplanner-mobile-api-logs/careplanner-mobile-logs-%s.txt",currentTime)
-	file, err := os.OpenFile(logFilePath, os.O_APPEND | os.O_CREATE | os.O_WRONLY, 0666 )
-	failOnError(err, "open file failed " + currentTime)
+	currentTime := time.Now().Format("2006-01-02")
+	logFilePath := fmt.Sprintf("logs/%s/%s-%s.txt", exchangeName, exchangeName, currentTime)
+
+	file, err := os.OpenFile(logFilePath, os.O_CREATE | os.O_APPEND| os.O_WRONLY, 0666)
+	failOnError(err, "error opening log file")
+	defer file.Close()
 	log.SetOutput(file)
 
 	conn, err := amqp.Dial("amqp://c2-test:c2-test-pw@ec2-43-203-234-165.ap-northeast-2.compute.amazonaws.com:5672/")
-	failOnError(err, "rabbitmq connection failed")
+	failOnError(err, "error connecting rabbitmq")
 	defer conn.Close()
 
 	ch, err := conn.Channel()
-	failOnError(err, "opening channel failed")
+	failOnError(err, "error making rabbitmq channel")
 	defer ch.Close()
 
-
-	exchangeName := "careplanner-mobile-api-logs"
-	routingKey := "careplanner-mobile-api-key"
+	
 	err = ch.ExchangeDeclare(
 		exchangeName, // name
 		"direct",     // type
@@ -51,8 +60,9 @@ func main(){
 	)
 	failOnError(err, "exchange declaration failed")
 
+	
 	queue, err := ch.QueueDeclare(
-		"careplanner-mobile-api-queue", // name
+		"msv-saas-phr-subs-queue", // name
 		false,                // durable
 		false,                // delete when unused
 		true,                 // exclusive
@@ -93,7 +103,8 @@ func main(){
 				file.Close()
 				currentTime = time.Now().Format("2006-01-02")
 
-				logFilePath := fmt.Sprintf("logs/careplanner-mobile-api-logs/careplanner-mobile-logs-%s.txt",currentTime)
+				logFilePath := fmt.Sprintf("logs/%s/%s-%s.txt", exchangeName, exchangeName, currentTime)
+
 				file, err = os.OpenFile(logFilePath, os.O_APPEND | os.O_CREATE | os.O_WRONLY, 0666 )
 				failOnError(err, "open file rotation failed " + currentTime)
 
@@ -102,7 +113,7 @@ func main(){
 			log.Printf("%s", d.Body)
 		}
 	}()
+	
 	<-forever
 	file.Close()
-
 }

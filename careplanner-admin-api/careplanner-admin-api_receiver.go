@@ -8,11 +8,11 @@ pw: c2-test-pw
 */
 
 /*
-sudo docker build -t careplanner-admin-api-receiver:0.0.1 .
+sudo docker build -t careplanner-admin-api-receiver:0.0.2 .
 
 sudo docker run -d --name careplanner-admin-api-receiver \
--v ~/logs/careplanner-admin-api-logs:/apps/logs/careplanner-admin-api-logs \
-careplanner-admin-api-receiver:0.0.1
+-v ~/logs/careplanner-admin-api-logs:/app/logs/careplanner-admin-api-logs \
+careplanner-admin-api-receiver:0.0.2
 */
 package main
 import (
@@ -29,8 +29,8 @@ func failOnError(err error, msg string) {
 	}
 }
 func main(){
-	currentTime := time.Now()
-	logFilePath := fmt.Sprintf("logs/careplanner-admin-api-logs/careplanner-admin-log-%s.txt", currentTime.Format("2006-01-02"))
+	currentTime := time.Now().Format("2006-01-02")
+	logFilePath := fmt.Sprintf("logs/careplanner-admin-api-logs/careplanner-admin-log-%s.txt", currentTime)
 
 	file, err := os.OpenFile(logFilePath, os.O_CREATE | os.O_APPEND| os.O_WRONLY, 0666)
 	failOnError(err, "error opening log file")
@@ -94,10 +94,22 @@ func main(){
 	var forever chan struct{}
 
 	go func(){
+		log.Printf("go routine started")
 		for d:= range msgs{
+			if currentTime != time.Now().Format("2006-01-02"){
+				file.Close()
+				currentTime = time.Now().Format("2006-01-02")
+
+				logFilePath := fmt.Sprintf("logs/careplanner-admin-api-logs/careplanner-admin-log-%s.txt",currentTime)
+				file, err = os.OpenFile(logFilePath, os.O_APPEND | os.O_CREATE | os.O_WRONLY, 0666 )
+				failOnError(err, "open file rotation failed " + currentTime)
+
+				log.SetOutput(file)
+			} 
 			log.Printf("%s", d.Body)
 		}
 	}()
 	
 	<-forever
+	file.Close()
 }
