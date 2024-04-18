@@ -12,8 +12,8 @@ Variable Format
 ```
 rabbitID: c2-$runMode
 rabbitPW: c2-$runMode-pw
-rabbitmqAddr: domainof ec2
-rabbitmqPort:5672
+rabbitmqAddr: domain of ec2
+rabbitmqPort: 5672
 ```
 ```
 ExchangeName: $subs-$runMode-exchange
