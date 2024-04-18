@@ -6,7 +6,7 @@ version=("0.0.1" "0.0.1" "0.0.1" "0.0.1" "0.0.1" "0.0.1" "0.0.1" "0.0.1")
 runmode="test"
 
 for ((i=0; i<${#subs[@]}; i++)); do
-    dir="/home/user/logs/${subs[i]}-${runmode}-logs"
+    dir="/home/ec2-user/logs/${subs[i]}-${runmode}-logs"
     dockerimage="${subs[i]}-subs:${version[i]}"
     sudo docker stop ${subs[i]}-subs
     sudo docker rm ${subs[i]}-subs
