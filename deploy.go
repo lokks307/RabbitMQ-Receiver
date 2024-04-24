@@ -53,10 +53,11 @@ func main() {
 	defer file.Close()
 	log.SetOutput(file)
 
-	rabbitmqServer = "ec2-43-203-234-165.ap-northeast-2.compute.amazonaws.com"
+	rabbitmqServer = "ec2-3-36-125-207.ap-northeast-2.compute.amazonaws.com"
 	rabbitmqPort = "5672"
 	rabbitmqAddr = fmt.Sprintf("amqp://%s:%s@%s:%s/", rabbitmqID, rabbitmqPW, rabbitmqServer, rabbitmqPort)
 
+	log.Printf("Dialing %s...", rabbitmqAddr)
 	conn, err := amqp.Dial(rabbitmqAddr)
 	failOnError(err, "error connecting rabbitmq")
 	defer conn.Close()

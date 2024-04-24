@@ -37,14 +37,9 @@ type webHookMessage struct {
 var logFileInfos []logFileInfo
 
 func main() {
-	loc, err := time.LoadLocation("Asia/Seoul")
-	if err != nil {
-		log.Printf("location error")
-		sendWebHook("location error")
-		return
-	}
+	ticker := time.NewTicker(30 * time.Minute) // 30분마다 실행
+	defer ticker.Stop()
 
-	startTime := time.Now().In(loc).Format("2006-01-02 15:04:05")
 	currentTime = time.Now().Format("20060102")
 
 	threshold := flag.String("threshold", "50", "disk usage threshold")
@@ -62,7 +57,25 @@ func main() {
 		sendWebHook("bucketempty")
 		return
 	}
+	// 처음 실행을 위해 고루틴 호출
+	go routine(thresholdVal, *bucketName)
 
+	for {
+		select {
+		case <-ticker.C:
+			go routine(thresholdVal, *bucketName) // 30분마다 고루틴 호출
+		}
+	}
+}
+func routine(thresholdVal int, bucketName string) {
+	loc, err := time.LoadLocation("Asia/Seoul")
+	if err != nil {
+		log.Printf("location error")
+		sendWebHook("location error")
+		return
+	}
+
+	startTime := time.Now().In(loc).Format("2006-01-02 15:04:05")
 	//Usage Check
 	usage, err := checkDiskUsage()
 	if err != nil {
@@ -92,7 +105,7 @@ func main() {
 
 		wg.Add(1)
 
-		go uploadFileToS3(el.Path, el.Name, *bucketName, &wg)
+		go uploadFileToS3(el.Path, el.Name, bucketName, &wg)
 	}
 
 	wg.Wait()
@@ -101,9 +114,7 @@ func main() {
 	log.Println(l)
 	sendWebHook(l)
 
-	return
 }
-
 func fileCheck(path string, info os.FileInfo, err error) error {
 	if err != nil {
 		fmt.Printf("Error accessing path %s: %v\n", path, err)
