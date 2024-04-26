@@ -23,10 +23,11 @@ func main() {
 
 	subs := flag.String("subs", "empty", "name of the subscriber")
 	runMode := flag.String("runmode", "test", "test or prod")
+	rabbitserver := flag.String("rabbitserver","empty","domain or ip of rabbit server")
 	flag.Parse()
 
-	if *subs == "empty" {
-		log.Printf("subs cant be empty")
+	if *subs == "empty" || *rabbitserver == "empty" {
+		log.Printf("subs or rabbitserver cant be empty")
 		return
 	}
 
@@ -53,7 +54,7 @@ func main() {
 	defer file.Close()
 	log.SetOutput(file)
 
-	rabbitmqServer = "ec2-3-36-125-207.ap-northeast-2.compute.amazonaws.com"
+	rabbitmqServer = *rabbitserver
 	rabbitmqPort = "5672"
 	rabbitmqAddr = fmt.Sprintf("amqp://%s:%s@%s:%s/", rabbitmqID, rabbitmqPW, rabbitmqServer, rabbitmqPort)
 
