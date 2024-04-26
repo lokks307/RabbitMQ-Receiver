@@ -1,7 +1,7 @@
 FROM golang:1.21
 
 ARG SUBS="empty"
-ARG RUNMODE="test"
+ARG RUNMODE="prod"
 
 RUN echo "subs and runmode"
 RUN echo $SUBS
@@ -12,7 +12,11 @@ ENV RUNMODE=$RUNMODE
 
 WORKDIR /app
 
-COPY deploy .
+COPY ./deploy.go .
+
+RUN go mod init deploy
+RUN go mod tidy
+RUN go build
 
 RUN mkdir -p "/app/logs/${SUBS}-${RUNMODE}-logs"
 

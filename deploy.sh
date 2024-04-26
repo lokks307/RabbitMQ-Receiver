@@ -2,8 +2,8 @@
 
 # subscriber list와 version 배열 선언
 subs=("careease-api" "careplanner-admin-api" "careplanner-api" "careplanner-mobile-api" "msv-saas-appt" "msv-saas-message" "msv-saas-checkup" "msv-saas-phr")
-version=("0.0.2" "0.0.2" "0.0.2" "0.0.2" "0.0.2" "0.0.2" "0.0.2" "0.0.2")
-runmode="test"
+version=("0.0.1" "0.0.1" "0.0.1" "0.0.1" "0.0.1" "0.0.1" "0.0.1" "0.0.1")
+runmode="prod"
 
 for ((i=0; i<${#subs[@]}; i++)); do
     dir="/home/ec2-user/logs/${subs[i]}-${runmode}-logs"
