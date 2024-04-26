@@ -1,5 +1,7 @@
 package main
 
+// nohup ./loglambda --threshold 50 --bucketname rabbitmq-prod-logbucket >> logOfEvictProcess.txt &
+
 import (
 	"bytes"
 	"encoding/json"
@@ -48,13 +50,13 @@ func main() {
 	thresholdVal, _ := strconv.Atoi(*threshold)
 
 	if thresholdVal < 0 || thresholdVal > 99 {
-		log.Print("threshold should be between 0 and 99")
-		sendWebHook("threshold should be between 0 and 99")
+		log.Print("Prod: threshold should be between 0 and 99")
+		sendWebHook("Prod: threshold should be between 0 and 99")
 		return
 	}
 	if *bucketName == "empty" {
-		log.Printf("bucketName: %s", *bucketName)
-		sendWebHook("bucketempty")
+		log.Printf("Prod: bucketName: %s", *bucketName)
+		sendWebHook("Prod: bucketempty")
 		return
 	}
 	// 처음 실행을 위해 고루틴 호출
@@ -70,8 +72,8 @@ func main() {
 func routine(thresholdVal int, bucketName string) {
 	loc, err := time.LoadLocation("Asia/Seoul")
 	if err != nil {
-		log.Printf("location error")
-		sendWebHook("location error")
+		log.Printf("Prod: location error")
+		sendWebHook("Prod: location error")
 		return
 	}
 
@@ -79,18 +81,18 @@ func routine(thresholdVal int, bucketName string) {
 	//Usage Check
 	usage, err := checkDiskUsage()
 	if err != nil {
-		log.Printf("Error checking disk usage: %s\n", err)
-		sendWebHook("Error checking disk usage")
+		log.Printf("Prod: Error checking disk usage: %s\n", err)
+		sendWebHook("Prod: Error checking disk usage")
 		os.Exit(1)
 	}
 	if int(usage) < thresholdVal {
-		l := fmt.Sprintf("Disk usage is %d, below threshold %d\n", int(usage), thresholdVal)
+		l := fmt.Sprintf("Prod: Disk usage is %d, below threshold %d\n", int(usage), thresholdVal)
 		log.Printf(l)
 		sendWebHook(l)
 		return
 	}
 
-	l := fmt.Sprintf("Disk usage is %d, above threshold %d\n", int(usage), thresholdVal)
+	l := fmt.Sprintf("Prod: Disk usage is %d, above threshold %d\n", int(usage), thresholdVal)
 	log.Printf(l)
 	sendWebHook(l)
 	//add files to slice
@@ -100,7 +102,7 @@ func routine(thresholdVal int, bucketName string) {
 	var wg sync.WaitGroup
 	for _, el := range logFileInfos {
 		if currentTime == el.ModTime {
-			log.Printf("Today's log excluded")
+			log.Printf("Prod: Today's log excluded")
 		}
 
 		wg.Add(1)
@@ -110,25 +112,25 @@ func routine(thresholdVal int, bucketName string) {
 
 	wg.Wait()
 	endTime := time.Now().In(loc).Format("2006-01-02 15:04:05")
-	l = fmt.Sprintf("Eviction Job started at %s and done at %s! bye~", startTime, endTime)
+	l = fmt.Sprintf("Prod: Eviction Job started at %s and done at %s! bye~", startTime, endTime)
 	log.Println(l)
 	sendWebHook(l)
 
 }
 func fileCheck(path string, info os.FileInfo, err error) error {
 	if err != nil {
-		fmt.Printf("Error accessing path %s: %v\n", path, err)
+		fmt.Printf("Prod: Error accessing path %s: %v\n", path, err)
 		return nil
 	}
 
 	if info.IsDir() {
-		log.Printf("%s is dir, so continue", path)
+		log.Printf("Prod: %s is dir, so continue", path)
 		return nil
 	}
 
 	fileInfo, err := os.Stat(path)
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("Prod: Error:", err)
 		return nil
 	}
 
@@ -149,7 +151,7 @@ func checkDiskUsage() (float64, error) {
 	}
 	lines := strings.Fields(string(output))
 	if len(lines) < 2 {
-		return 0, fmt.Errorf("unexpected output: %s", output)
+		return 0, fmt.Errorf("Prod: unexpected output: %s", output)
 	}
 	pctStr := strings.TrimRight(lines[1], "%")
 	var pct float64
@@ -165,7 +167,7 @@ func uploadFileToS3(filePath, fileName, bucket string, wg *sync.WaitGroup) error
 	}))
 	uploader := s3manager.NewUploader(sess)
 
-	log.Printf("Sending file %s to %s bucket", filePath, bucket)
+	log.Printf("Prod: Sending file %s to %s bucket", filePath, bucket)
 
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -180,30 +182,30 @@ func uploadFileToS3(filePath, fileName, bucket string, wg *sync.WaitGroup) error
 		Body:   file,
 	})
 
-	// err = os.Remove(filePath)
-	// if err != nil {
-	// 	log.Printf("Failed to remove file %s: %v", filePath, err)
-	// } else {
-	// 	log.Printf("File %s removed successfully", filePath)
-	// }
+	err = os.Remove(filePath)
+	if err != nil {
+		log.Printf("Prod: Failed to remove file %s: %v", filePath, err)
+	} else {
+		log.Printf("Prod: File %s removed successfully", filePath)
+	}
 	return err
 }
 
 func sendWebHook(msg string) error {
-	log.Println("sending webhook")
+	log.Println("Prod: sending webhook")
 	webhookURL := "https://lokksio.webhook.office.com/webhookb2/a4303448-984f-4c61-9c6d-bf574051f4c7@813bddad-fdc2-434d-b0a0-9c831c139401/IncomingWebhook/553927d201904fabbb988ec59166db31/f149ba3b-8aa6-4944-92de-6b6471a157ae"
 	message := webHookMessage{
 		Message: msg,
 	}
 	messageBytes, err := json.Marshal(message)
 	if err != nil {
-		fmt.Println("Failed to serialize message:", err)
+		fmt.Println("Prod: Failed to serialize message:", err)
 		return err
 	}
 
 	req, err := http.NewRequest("POST", webhookURL, bytes.NewBuffer(messageBytes))
 	if err != nil {
-		fmt.Println("Failed to create HTTP request:", err)
+		fmt.Println("Prod: Failed to create HTTP request:", err)
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -211,13 +213,13 @@ func sendWebHook(msg string) error {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Failed to send HTTP request:", err)
+		fmt.Println("Prod: Failed to send HTTP request:", err)
 		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return fmt.Errorf("Prod: unexpected status code: %d", resp.StatusCode)
 	}
 
 	return nil
