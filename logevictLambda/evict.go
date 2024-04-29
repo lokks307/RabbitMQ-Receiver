@@ -1,7 +1,7 @@
 package main
 
 // nohup ./loglambda --threshold 50 --bucketname rabbitmq-prod-logbucket >> logOfEvictProcess.txt &
-
+// nohup ./loglambda --threshold 1 --bucketname rabbitmq-prod-logbucket >> logOfEvictProcess.txt &
 import (
 	"bytes"
 	"encoding/json"
@@ -103,6 +103,7 @@ func routine(thresholdVal int, bucketName string) {
 	for _, el := range logFileInfos {
 		if currentTime == el.ModTime {
 			log.Printf("Prod: Today's log excluded")
+			continue
 		}
 
 		wg.Add(1)
